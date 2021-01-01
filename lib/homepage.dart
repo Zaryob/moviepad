@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'context_page.dart';
 import 'test.dart';
 import 'category_page.dart';
 import 'imdb.dart';
 import 'user_dashboard.dart';
+import 'moviedb.dart';
+import 'package:http/http.dart' as http;
+
 
 
 class HomePage extends StatefulWidget {
@@ -197,14 +201,28 @@ class ListViewSearch extends StatefulWidget {
 class _ListViewSearchState extends State<ListViewSearch> {
   TextEditingController _textController = TextEditingController();
 
-  List<IMBDListItem> _newData = [];
-
+  String _newData = "";
+  Widget searchPage=Text("Nothing else matter");
   _onChanged(String value) {
     setState(() {
-      _newData=IMDBList.where((element) => element.title.toLowerCase().contains(value.toLowerCase())).toList();
+      _newData=value;
+      searchPage=Search(value);
     });
   }
-
+  @override
+  Widget Search(String asd) {
+    return FutureBuilder<List<Publish>>(
+      future: fetchSearchMovies(asd),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return MoviesList(Movies: snapshot.data);
+        } else if (snapshot.hasError) {
+          return Center(child: Icon(Icons.android,size: 220,));
+        }
+        return Center(child: CircularProgressIndicator());
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -230,22 +248,22 @@ class _ListViewSearchState extends State<ListViewSearch> {
                   borderSide: BorderSide(color: Colors.blue),
                 ),
               ),
-              onChanged: _onChanged,
+              onChanged: _onChanged(_textController.text),
             ),
           ),
         ),
         SizedBox(height: 20.0),
-        _newData != null && _newData.length != 0
-            ? Expanded(
-          child: ListView(
-            padding: EdgeInsets.all(10.0),
-            itemExtent: 106.0,
-            children: _newData.map((data) {
-              return data;
-            }).toList(),
-          ),
+        FutureBuilder<List<Publish>>(
+          future: fetchSearchMovies(_textController.text),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return MoviesList(Movies: snapshot.data);
+            } else if (snapshot.hasError) {
+              return Center(child: Icon(Icons.android,size: 220,));
+            }
+            return Center(child: CircularProgressIndicator());
+          },
         )
-            : SizedBox(),
       ],
     );
   }
@@ -254,10 +272,16 @@ class _ListViewSearchState extends State<ListViewSearch> {
 class HomeBodyWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(8.0),
-      itemExtent: 106.0,
-      children: IMDBList,
+    return FutureBuilder<List<Publish>>(
+      future: fetchMovies(http.Client()),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return MoviesList(Movies: snapshot.data);
+        } else if (snapshot.hasError) {
+          return Center(child: Icon(Icons.android,size: 220,));
+        }
+        return Center(child: CircularProgressIndicator());
+      },
     );
   }
 }
@@ -434,5 +458,78 @@ class _AppDrawerState extends State<AppDrawer> {
         Expanded(child: showUserDetails ? _buildUserDetail() : _buildDrawerList())
       ]),
     );
+  }
+}
+
+class MoviesList extends StatelessWidget {
+  final List<Publish> Movies;
+
+  MoviesList({Key key,this.Movies}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      /*gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 1,
+        ),*/
+      separatorBuilder: (BuildContext context, int index) => Divider(),
+      itemCount: 20,
+      itemBuilder: (context, index) {
+        return Card(
+          color: Colors.blue[50],
+          child: ListTile(
+            onTap: (){
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PublishmentDetailsPage(Movies[index])),
+              );
+            },
+            title: Row(children: [
+              /*SizedBox(
+                width: 200,
+                child: Text(games[index].title),
+              ),*/
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                              child: Image.network(Movies[index].poster_path),
+                            width: 170,),
+                          Container(
+                            width: 170,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Text(Movies[index].title,style: TextStyle(fontSize: 20.0
+                                ),),
+                                Text(Movies[index].release_date,style: TextStyle(fontSize: 15.0
+                                ),),
+                                StarDisplayWidget(value:((Movies[index].vote_average)/2).round(),
+                                  filledStar: Icon(Icons.star, color: Colors.orange, size: 28),
+                                  unfilledStar: Icon(Icons.star_border, color: Colors.blueGrey),),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                    ],),
+                  ),
+                ),
+            ],),
+            //onTap: ,
+          ),
+        );
+      },
+
+    );
+
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:moviepad/secondpage.dart';
+import 'moviedb.dart';
+import 'package:http/http.dart' as http;
 
 class Publishment {
   Publishment({
@@ -46,7 +48,7 @@ class ArcBannerImage extends StatelessWidget {
 
     return ClipPath(
       clipper: ArcClipper(),
-      child: Image.asset(
+      child: Image.network(
         imageUrl,
         width: screenWidth,
         height: 230.0,
@@ -136,15 +138,15 @@ class ActorScroller extends StatelessWidget {
 
 class PublishmentDetailHeader extends StatelessWidget {
   PublishmentDetailHeader(this.movie);
-  final Publishment movie;
+  final Publish movie;
 
   List<Widget> _buildCategoryChips(TextTheme textTheme) {
-    return movie.categories.map((category) {
+    return movie.genre_ids.map((category) {
       return Expanded(
           child:Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: Chip(
-              label: Text(category),
+              label: Text(category.toString()),
               labelStyle: textTheme.caption,
               backgroundColor: Colors.black12,
             ),
@@ -175,7 +177,7 @@ class PublishmentDetailHeader extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 140.0),
-          child: ArcBannerImage(movie.bannerUrl),
+          child: ArcBannerImage(movie.backdrop_path),
         ),
         Positioned(
           bottom: 0.0,
@@ -186,7 +188,7 @@ class PublishmentDetailHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Poster(
-                movie.posterUrl,
+                movie.poster_path,
                 height: 180.0,
               ),
               SizedBox(width: 16.0),
@@ -201,11 +203,11 @@ class PublishmentDetailHeader extends StatelessWidget {
 
 class PublishmentDetailsPage extends StatelessWidget {
   PublishmentDetailsPage(this.movie);
-  final Publishment movie;
+  final Publish movie;
   Widget _episodeAdder() {
     var stars = <Widget>[];
     stars.add( SizedBox(height: 20.0));
-    if (movie.type=='Serie'){
+    if (movie.media_type=='tv'){
       stars.add(Episode());
       stars.add(SizedBox(height: 20.0));
     }
@@ -230,11 +232,11 @@ class PublishmentDetailsPage extends StatelessWidget {
             PublishmentDetailHeader(movie),
             Padding(
               padding: const EdgeInsets.all(20.0),
-              child: Storyline(movie.storyline),
+              child: Storyline(movie.overview),
             ),
-            PhotoScroller(movie.photoUrls),
+            // PhotoScroller(movie.photoUrls),
             _episodeAdder(),
-            ActorScroller(movie.actors),
+            //ActorScroller(movie.actors),
             SizedBox(height: 20.0),
             TextField(
               decoration: InputDecoration(
@@ -276,12 +278,12 @@ class Episode extends StatelessWidget {
         padding: EdgeInsets.all(8.0),
         splashColor: Colors.blue,
         onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          HomePage2('Episodes',flag)));
-            },
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) =>
+                      HomePage2('Episodes',flag)));
+        },
         child: Text(
           "Episodes",
           style: TextStyle(fontSize: 20.0),
@@ -360,7 +362,7 @@ class Poster extends StatelessWidget {
       borderRadius: BorderRadius.circular(4.0),
       elevation: 2.0,
       color: Colors.blue,
-      child: Image.asset(
+      child: Image.network(
         posterUrl,
         fit: BoxFit.cover,
         width: width,
@@ -372,13 +374,13 @@ class Poster extends StatelessWidget {
 
 class RatingInformation extends StatelessWidget {
   RatingInformation(this.movie);
-  final Publishment movie;
+  final Publish movie;
 
   Widget _buildRatingBar(ThemeData theme) {
     var stars = <Widget>[];
 
     for (var i = 1; i <= 5; i++) {
-      var color = i <= movie.starRating ? theme.accentColor : Colors.black12;
+      var color = i <= (movie.vote_average/2).round() ? theme.accentColor : Colors.black12;
       var star = Icon(
         Icons.star,
         color: color,
@@ -401,7 +403,7 @@ class RatingInformation extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          movie.rating.toString(),
+          movie.vote_average.toString(),
           style: textTheme.title.copyWith(
             fontWeight: FontWeight.w400,
             color: theme.accentColor,

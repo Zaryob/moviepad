@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'context_page.dart';
+import 'test.dart';
 
 class IMBDListItem extends StatefulWidget {
   const IMBDListItem({
@@ -21,17 +22,19 @@ class IMBDListItem extends StatefulWidget {
 }
 
 class _IMBDListItemState extends State<IMBDListItem> {
+  /*
   void _handleTap() {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => PublishmentDetailsPage(widget.detailsElement)),
     );
   }
+  */
 
   @override
   Widget build(BuildContext context) {
     return  GestureDetector(
-        onTap: _handleTap,
+       // onTap: _handleTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 5.0),
           child: Row(
