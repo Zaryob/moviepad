@@ -1,42 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:moviepad/secondpage.dart';
+import 'package:moviepad/episodes_page.dart';
 import 'moviedb.dart';
 import 'package:http/http.dart' as http;
-
-class Publishment {
-  Publishment({
-    this.bannerUrl,
-    this.posterUrl,
-    this.title,
-    this.rating,
-    this.starRating,
-    this.categories,
-    this.type,
-    this.storyline,
-    this.photoUrls,
-    this.actors,
-  });
-  final String type;
-  final String bannerUrl;
-  final String posterUrl;
-  final String title;
-  final double rating;
-  final int starRating;
-  final List<String> categories;
-  final String storyline;
-  final List<String> photoUrls;
-  final List<Actor> actors;
-}
-
-class Actor {
-  Actor({
-    this.name,
-    this.avatarUrl,
-  });
-
-  final String name;
-  final String avatarUrl;
-}
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'signup_page.dart';
+import 'homepage.dart';
 
 class ArcBannerImage extends StatelessWidget {
   ArcBannerImage(this.imageUrl);
@@ -84,76 +52,9 @@ class ArcClipper extends CustomClipper<Path> {
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
 
-class ActorScroller extends StatelessWidget {
-  ActorScroller(this.actors);
-  final List<Actor> actors;
-
-  Widget _buildActor(BuildContext ctx, int index) {
-    var actor = actors[index];
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 16.0),
-      child: Column(
-        children: [
-          CircleAvatar(
-            backgroundImage: AssetImage(actor.avatarUrl),
-            radius: 40.0,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(actor.name),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    var textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Text(
-            'Actors',
-            style: textTheme.subhead.copyWith(fontSize: 18.0),
-          ),
-        ),
-        SizedBox.fromSize(
-          size: const Size.fromHeight(120.0),
-          child: ListView.builder(
-            itemCount: actors.length,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.only(top: 12.0, left: 20.0),
-            itemBuilder: _buildActor,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class PublishmentDetailHeader extends StatelessWidget {
   PublishmentDetailHeader(this.movie);
-  final Publish movie;
-
-  List<Widget> _buildCategoryChips(TextTheme textTheme) {
-    return movie.genre_ids.map((category) {
-      return Expanded(
-          child:Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: Chip(
-              label: Text(category.toString()),
-              labelStyle: textTheme.caption,
-              backgroundColor: Colors.black12,
-            ),
-          )
-      );
-    }).toList();
-  }
+  final MoviePage movie;
 
   @override
   Widget build(BuildContext context) {
@@ -168,8 +69,7 @@ class PublishmentDetailHeader extends StatelessWidget {
         ),
         SizedBox(height: 8.0),
         RatingInformation(movie),
-        SizedBox(height: 12.0),
-        Row(children: _buildCategoryChips(textTheme)),
+        SizedBox(height: 8.0),
       ],
     );
 
@@ -191,7 +91,7 @@ class PublishmentDetailHeader extends StatelessWidget {
                 movie.poster_path,
                 height: 180.0,
               ),
-              SizedBox(width: 16.0),
+              SizedBox(width: 25.0),
               Expanded(child: movieInformation),
             ],
           ),
@@ -201,19 +101,43 @@ class PublishmentDetailHeader extends StatelessWidget {
   }
 }
 
-class PublishmentDetailsPage extends StatelessWidget {
+class PublishmentDetailsPage extends StatefulWidget {
   PublishmentDetailsPage(this.movie);
+
   final Publish movie;
-  Widget _episodeAdder() {
-    var stars = <Widget>[];
-    stars.add( SizedBox(height: 20.0));
-    if (movie.media_type=='tv'){
-      stars.add(Episode());
-      stars.add(SizedBox(height: 20.0));
+
+  @override
+  _PublishmentDetailsPageState createState() => _PublishmentDetailsPageState();
+}
+
+class _PublishmentDetailsPageState extends State<PublishmentDetailsPage> {
+  MoviePage moviepage;
+
+  @override
+  void initState() {
+    super.initState();
+    var call = fetchMovieDetails(http.Client(), widget.movie.id);
+    call.then((data) {
+      setState(() {
+        moviepage = data;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (moviepage == null) {
+      return PublishmentDetailsPageProgressScaffold(widget.movie);
     }
 
-    return Center(child: Row(children: stars));
+    return PublishmentDetailsPageScaffold(MoviePages: moviepage);
   }
+}
+
+class PublishmentDetailsPageProgressScaffold extends StatelessWidget {
+  final Publish movie;
+  PublishmentDetailsPageProgressScaffold(this.movie);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -225,44 +149,200 @@ class PublishmentDetailsPage extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
 
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            PublishmentDetailHeader(movie),
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Storyline(movie.overview),
-            ),
-            // PhotoScroller(movie.photoUrls),
-            _episodeAdder(),
-            //ActorScroller(movie.actors),
-            SizedBox(height: 20.0),
-            TextField(
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Comment',
-                enabledBorder: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(30.0)),
-                  borderSide: const BorderSide(
-                    color: Colors.grey,
+class PublishmentDetailsPageScaffold extends StatefulWidget {
+  MoviePage MoviePages;
+
+  PublishmentDetailsPageScaffold({Key key, this.MoviePages});
+
+  @override
+  _PublishmentDetailsPageScaffoldState createState() => _PublishmentDetailsPageScaffoldState();
+}
+
+class _PublishmentDetailsPageScaffoldState extends State<PublishmentDetailsPageScaffold> {
+  final commentController = new TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.blue[900],
+        title: Center(child: Text(widget.MoviePages.title)),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: ListView(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+
+                PublishmentDetailHeader(widget.MoviePages),
+                SizedBox(height: 20.0),
+                Text(widget.MoviePages.tagline,
+                    style: TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                    )),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 20.0, 0, 8.0),
+                  child: InkWell(
+                    child: Chip(
+                      backgroundColor: Colors.blue,
+                      label: Text(
+                        "Status: " + widget.MoviePages.status,
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      deleteIcon: Icon(Icons.merge_type_outlined),
+                    ),
                   ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                  borderSide: BorderSide(color: Colors.blue),
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Genres(widget.MoviePages),
                 ),
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Storyline(widget.MoviePages.overview),
+                ),
+
+                //PhotoScroller(MoviePages.images.posters),
+                //SizedBox(height: 20.0),
+                // BackdropsScroller(MoviePages.images.backdrops),
+                // SizedBox(height: 20.0),
+                //   _episodeAdder(),
+                ActorScroller(widget.MoviePages.credits.cast),
+                SizedBox(height: 20.0),
+                CrewScroller(widget.MoviePages.credits.crew),
+                SizedBox(height: 20.0),
+                ProductorScroller(widget.MoviePages.production_companies),
+                SizedBox(height: 20.0),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(width: 3.0,color: Colors.grey),
+                    borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(""),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: TextField(
+                              controller: commentController,
+                              decoration: InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: 'Comment',
+                                enabledBorder: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                      width: 2,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                                  borderSide: BorderSide(
+                                      color: Color(0xFF1565C0),
+                                      width: 2),
+                                ),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.search,
+                            color: Colors.blue[900],),
+                            tooltip: 'Search Movies',
+                            onPressed: () {
+                              setState(() {
+                                //Set the state with the new value so that the widget will re render
+                                if(commentController.text!=""){
+                                FirebaseFirestore.instance//.collection("Comments").doc(UserClass.userInfo2)
+                                    .collection(widget.MoviePages.title).doc("${HomePage().userNo}")
+                                    .set( {'comment': commentController.text,});}
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      Text(""),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 10.0),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SizedBox(
+              child: Column(
+                children: [
+                  Card(
+                    elevation: 10,
+                    color: Colors.blue[200],
+                    child: Container(
+                      width: 400,
+                        height: 50,
+                        child: Center(
+                            child: Text(
+                              widget.MoviePages.title+"'s Comments",textScaleFactor: 1.5,))),),
+                  StreamBuilder(
+                      stream: FirebaseFirestore.instance.collection(widget.MoviePages.title).snapshots(),
+                      builder: (context, snapshot) {
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: snapshot.data.documents.length,
+                          separatorBuilder: (BuildContext context, int index) => Divider(height: 4,),
+                          itemBuilder: (BuildContext context, int index) {
+                            if(snapshot.data.documents.length!=0)
+                              return Card(
+                                elevation: 10,
+                                color: Colors.blue[100],
+                                child: ListTile(
+                                  title: Text(snapshot.data.documents[index]['comment']),
+                                  subtitle: Text("${AppDrawer().userNo}"),
+                                  trailing: GestureDetector(
+                                      child: Icon(
+                                        Icons.delete_outline,
+                                        size: 20.0,
+                                        color: Colors.brown[900],
+                                      ),
+
+                                ),
+                                  onTap: (){
+                                    setState(() {
+                                      FirebaseFirestore.instance
+                                          .collection(widget.MoviePages.title).document("${HomePage().userNo}")
+                                          .delete()
+                                          .then((value) => print("Comment deleted"))
+                                          .catchError((error)=> print("catched $error"));
+                                    });
+                                  },
+                                ),
+                              );
+                            return Text("");
+                          },
+                        );
+                      }
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 50.0),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
+
 class Episode extends StatelessWidget {
-  bool flag= true;
+  bool flag = true;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -281,8 +361,7 @@ class Episode extends StatelessWidget {
           Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) =>
-                      HomePage2('Episodes',flag)));
+                  builder: (context) => HomePage2('Episodes', flag)));
         },
         child: Text(
           "Episodes",
@@ -293,20 +372,225 @@ class Episode extends StatelessWidget {
   }
 }
 
+class ActorScroller extends StatelessWidget {
+  ActorScroller(this.actors);
+  final List<MoviePageCast> actors;
 
+  Widget _buildActor(BuildContext ctx, int index) {
+    var actor = actors[index];
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 16.0),
+      child: Column(
+        children: [
+          CircleAvatar(
+            child: actor.profile_path == null
+                ? Icon(Icons.account_circle)
+                : ClipOval(
+                    child: Image.network(
+                      actor.profile_path,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+            radius: 40.0,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 10.0),
+            child: Text(actor.name),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 10.0),
+            child: Text(actor.character,
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var lenght = 4;
+    if (actors.length > 4) {
+      lenght = 4;
+    } else {
+      lenght = actors.length;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Text(
+            'Actors',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        SizedBox(height: 10.0),
+        SizedBox.fromSize(
+          size: const Size.fromHeight(150.0),
+          child: ListView.builder(
+            itemCount: lenght,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(left: 20.0),
+            itemBuilder: _buildActor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class CrewScroller extends StatelessWidget {
+  CrewScroller(this.crews);
+  final List<MoviePageCrew> crews;
+
+  Widget _buildActor(BuildContext ctx, int index) {
+    var crew = crews[index];
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 16.0),
+      child: Column(
+        children: [
+          CircleAvatar(
+            child: crew.profile_path == null
+                ? Icon(Icons.account_circle)
+                : ClipOval(
+                    child: Image.network(
+                    crew.profile_path,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  )),
+            radius: 40.0,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(crew.name),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(crew.job,
+                style: TextStyle(
+                  fontStyle: FontStyle.italic,
+                )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var lenght = 4;
+    if (crews.length > 4) {
+      lenght = 4;
+    } else {
+      lenght = crews.length;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Text(
+            'Crews',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        SizedBox(height: 10.0),
+        SizedBox.fromSize(
+          size: const Size.fromHeight(150.0),
+          child: ListView.builder(
+            itemCount: lenght,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(top: 12.0, left: 20.0),
+            itemBuilder: _buildActor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ProductorScroller extends StatelessWidget {
+  ProductorScroller(this.productors);
+  final List<MoviePageCompanies> productors;
+
+  Widget _buildProductor(BuildContext ctx, int index) {
+    var productor = productors[index];
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 16.0),
+      child: Column(
+        children: [
+          CircleAvatar(
+            child: productor.logo_path == null
+                ? Icon(Icons.movie_creation_outlined)
+                : Image.network(
+                    productor.logo_path,
+                    fit: BoxFit.scaleDown,
+                  ),
+            radius: 40.0,
+            backgroundColor: Colors.transparent,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(productor.name),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Text('Productor Companies',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              )),
+        ),
+        SizedBox(height: 10.0),
+        SizedBox.fromSize(
+          size: const Size.fromHeight(120.0),
+          child: ListView.builder(
+            itemCount: productors.length,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(top: 12.0, left: 20.0),
+            itemBuilder: _buildProductor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/*
 class PhotoScroller extends StatelessWidget {
   PhotoScroller(this.photoUrls);
-  final List<String> photoUrls;
+  final List<MoviePagePosters> photoUrls;
 
   Widget _buildPhoto(BuildContext context, int index) {
     var photo = photoUrls[index];
-
     return Padding(
       padding: const EdgeInsets.only(right: 16.0),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4.0),
-        child: Image.asset(
-          photo,
+        child: Image.network(
+          photo.file_path,
           width: 160.0,
           height: 120.0,
           fit: BoxFit.cover,
@@ -317,22 +601,25 @@ class PhotoScroller extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var textTheme = Theme.of(context).textTheme;
-
+    var blenght = 4;
+    if (photoUrls.length > 4) {
+      blenght = 4;
+    } else {
+      blenght = photoUrls.length;
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0),
           child: Text(
-            'Photos',
-            style: textTheme.subhead.copyWith(fontSize: 18.0),
+            'Posters',
           ),
         ),
         SizedBox.fromSize(
           size: const Size.fromHeight(100.0),
           child: ListView.builder(
-            itemCount: photoUrls.length,
+            itemCount: blenght,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.only(top: 8.0, left: 20.0),
             itemBuilder: _buildPhoto,
@@ -343,13 +630,66 @@ class PhotoScroller extends StatelessWidget {
   }
 }
 
+class BackdropsScroller extends StatelessWidget {
+  BackdropsScroller(this.photoUrls);
+  final List<MoviePageBackdrops> photoUrls;
+
+  Widget _buildPhoto(BuildContext context, int index) {
+    var photo = photoUrls[index];
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 16.0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4.0),
+        child: Image.network(
+          photo.file_path,
+          width: 160.0,
+          height: 120.0,
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var blenght = 4;
+    if (photoUrls.length > 4) {
+      blenght = 4;
+    } else {
+      blenght = photoUrls.length;
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Text(
+            'Backdrops',
+          ),
+        ),
+        SizedBox.fromSize(
+          size: const Size.fromHeight(100.0),
+          child: ListView.builder(
+            itemCount: blenght,
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(top: 8.0, left: 20.0),
+            itemBuilder: _buildPhoto,
+          ),
+        ),
+      ],
+    );
+  }
+}
+*/
+
 class Poster extends StatelessWidget {
   static const POSTER_RATIO = 0.7;
 
   Poster(
-      this.posterUrl, {
-        this.height = 100.0,
-      });
+    this.posterUrl, {
+    this.height = 100.0,
+  });
 
   final String posterUrl;
   final double height;
@@ -374,13 +714,15 @@ class Poster extends StatelessWidget {
 
 class RatingInformation extends StatelessWidget {
   RatingInformation(this.movie);
-  final Publish movie;
+  final MoviePage movie;
 
   Widget _buildRatingBar(ThemeData theme) {
     var stars = <Widget>[];
 
     for (var i = 1; i <= 5; i++) {
-      var color = i <= (movie.vote_average/2).round() ? theme.accentColor : Colors.black12;
+      var color = i <= (movie.vote_average / 2).round()
+          ? theme.accentColor
+          : Colors.black12;
       var star = Icon(
         Icons.star,
         color: color,
@@ -442,16 +784,18 @@ class Storyline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var theme = Theme.of(context);
-    var textTheme = Theme.of(context).textTheme;
+    //var theme = Theme.of(context);
+    //var textTheme = Theme.of(context).textTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Story line',
-          style: textTheme.subhead.copyWith(fontSize: 18.0),
-        ),
+        Text('Story line',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            )
+            // style: textTheme.subhead.copyWith(fontSize: 18.0),
+            ),
         SizedBox(height: 8.0),
         new Container(
           child: new DescriptionTextWidget(text: storyline),
@@ -461,14 +805,14 @@ class Storyline extends StatelessWidget {
   }
 }
 
-
 class DescriptionTextWidget extends StatefulWidget {
   final String text;
 
   DescriptionTextWidget({@required this.text});
 
   @override
-  _DescriptionTextWidgetState createState() => new _DescriptionTextWidgetState();
+  _DescriptionTextWidgetState createState() =>
+      new _DescriptionTextWidgetState();
 }
 
 class _DescriptionTextWidgetState extends State<DescriptionTextWidget> {
@@ -497,26 +841,62 @@ class _DescriptionTextWidgetState extends State<DescriptionTextWidget> {
       child: secondHalf.isEmpty
           ? new Text(firstHalf)
           : new Column(
-        children: <Widget>[
-          new Text(flag ? (firstHalf + "...") : (firstHalf + secondHalf)),
-          new InkWell(
-            child: new Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
-                new Text(
-                  flag ? "show more" : "show less",
-                  style: new TextStyle(color: Colors.blue),
+                new Text(flag ? (firstHalf + "...") : (firstHalf + secondHalf)),
+                new InkWell(
+                  child: new Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      new Text(
+                        flag ? "show more" : "show less",
+                        style: new TextStyle(color: Colors.blue),
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    setState(() {
+                      flag = !flag;
+                    });
+                  },
                 ),
               ],
             ),
-            onTap: () {
-              setState(() {
-                flag = !flag;
-              });
-            },
+    );
+  }
+}
+
+class Genres extends StatelessWidget {
+  Genres(this.movie);
+  final MoviePage movie;
+
+  List<Widget> _buildCategoryChips() {
+    return movie.genres.map((category) {
+      return Expanded(
+          child: Padding(
+        padding: const EdgeInsets.only(right: 8.0),
+        child: Chip(
+          label: Text(category.name),
+          backgroundColor: Colors.black12,
+        ),
+      ));
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'Genres',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
           ),
-        ],
-      ),
+          //style: textTheme.subhead.copyWith(fontSize: 18.0),
+        ),
+        SizedBox(height: 8.0),
+        Row(children: _buildCategoryChips()),
+      ],
     );
   }
 }

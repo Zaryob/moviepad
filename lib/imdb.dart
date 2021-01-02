@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'context_page.dart';
-import 'test.dart';
+
 
 class IMBDListItem extends StatefulWidget {
   const IMBDListItem({
@@ -8,14 +8,12 @@ class IMBDListItem extends StatefulWidget {
     this.title,
     this.publisher,
     this.starCount,
-    this.detailsElement,
   });
 
   final String thumbnail;
   final String title;
   final String publisher;
   final int starCount;
-  final Publishment detailsElement;
 
   @override
   _IMBDListItemState createState() => _IMBDListItemState();
@@ -33,35 +31,36 @@ class _IMBDListItemState extends State<IMBDListItem> {
 
   @override
   Widget build(BuildContext context) {
-    return  GestureDetector(
-       // onTap: _handleTap,
+    return GestureDetector(
+        // onTap: _handleTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(
-                flex: 2,
-                child: widget.thumbnail.isNotEmpty ? ThumbnailImage(widget.thumbnail) : Container(
-                  decoration: const BoxDecoration(color: Colors.blue),
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: _IMBDItemDescription(
-                  title: widget.title,
-                  user: widget.publisher,
-                  starCount: widget.starCount,
-                ),
-              ),
-              const Icon(
-                Icons.more_vert,
-                size: 16.0,
-              ),
-            ],
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            flex: 2,
+            child: widget.thumbnail.isNotEmpty
+                ? ThumbnailImage(widget.thumbnail)
+                : Container(
+                    decoration: const BoxDecoration(color: Colors.blue),
+                  ),
           ),
-        )
-    );
+          Expanded(
+            flex: 3,
+            child: _IMBDItemDescription(
+              title: widget.title,
+              user: widget.publisher,
+              starCount: widget.starCount,
+            ),
+          ),
+          const Icon(
+            Icons.more_vert,
+            size: 16.0,
+          ),
+        ],
+      ),
+    ));
   }
 }
 
@@ -122,7 +121,6 @@ class StarDisplayWidget extends StatelessWidget {
     @required this.unfilledStar,
   })  : assert(value != null),
         super(key: key);
-
 
   @override
   Widget build(BuildContext context) {

@@ -21,7 +21,7 @@ class Dashboard extends StatelessWidget {
         textAlign: TextAlign.justify,
         text: TextSpan(
             text:
-            'Produced by: \n   Abdulkadir Bozoğlu \n   Kutay Karaman \n   Süleyman Poyraz',
+                'Produced by: \n   Abdulkadir Bozoğlu \n   Kutay Karaman \n   Süleyman Poyraz',
             style: TextStyle(color: Colors.black, fontSize: 20)),
       ),
     );
@@ -32,29 +32,25 @@ class Dashboard extends StatelessWidget {
         ),
         onPressed: () {
           Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) =>
-                      MyApp()));
+              context, MaterialPageRoute(builder: (context) => MyApp()));
         });
     return SafeArea(
         child: Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.blue[900],
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            title: Text("User Dashboard"),
-          ),
-          body: Center(
-            child: ListView(
-              shrinkWrap: true,
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              children: <Widget>[avatar, description, buttonLogout],
-            ),
-          ),
-        )
-    );
+      appBar: AppBar(
+        backgroundColor: Colors.blue[900],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text("User Dashboard"),
+      ),
+      body: Center(
+        child: ListView(
+          shrinkWrap: true,
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          children: <Widget>[avatar, description, buttonLogout],
+        ),
+      ),
+    ));
   }
 }
