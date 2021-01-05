@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'context_page.dart';
 import 'category_page.dart';
 import 'imdb.dart';
+import 'moviesql.dart';
+import 'notes.dart';
 import 'user_dashboard.dart';
 import 'moviedb.dart';
 import 'package:http/http.dart' as http;
@@ -24,9 +26,9 @@ class _HomePageState extends State<HomePage> {
     ListViewSearch(),
     MePage(),
   ];
-
   @override
   Widget build(BuildContext context) {
+
     return MaterialApp(
       title: widget.title,
       home: Scaffold(
@@ -77,6 +79,8 @@ class MePage extends StatefulWidget {
 }
 
 class _MePageState extends State<MePage> {
+  final dbHelper = DatabaseHelper.instance;
+
   @override
   Widget build(BuildContext context) {
     return ListView(children: <Widget>[
@@ -87,23 +91,25 @@ class _MePageState extends State<MePage> {
           ListTile(
             title: Text("Favourite Films"),
             trailing: Icon(Icons.arrow_forward),
-            onTap: () {
-              /*
+            onTap: () async {
+
+              final allRows = await dbHelper.movies();
+
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) =>
-                        CategoryPage("Favourite Films", IMDBFilmList)),
+                    builder: (context) => MePageDetailsPageScaffold(FavPublishment:allRows),
+              )
               );
 
-               */
             },
           ),
+/*
           ListTile(
             title: Text("Favourite Series"),
             trailing: Icon(Icons.arrow_forward),
             onTap: () {
-              /*
+
               // do something
               Navigator.push(
                 context,
@@ -112,12 +118,14 @@ class _MePageState extends State<MePage> {
                         CategoryPage("Favourite Series", IMDBSerieList)),
               );
 
-               */
+
             },
           ),
+ */
         ],
         trailing: Icon(Icons.arrow_drop_down_circle_outlined),
       ),
+
       ExpansionTile(
         title: Text("Personal List"),
         leading: Icon(Icons.tv),
@@ -125,32 +133,36 @@ class _MePageState extends State<MePage> {
           ListTile(
             title: Text("Watched"),
             trailing: Icon(Icons.arrow_forward),
-            onTap: () {
-              /*
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        CategoryPage("Watched", IMDBFilmList)),
-              );
-               */
-            },
+            onTap: () async {
+
+    final allRows = await dbHelper.watchedMovies();
+
+    Navigator.push(
+    context,
+    MaterialPageRoute(
+    builder: (context) => MePageDetailsPageScaffold(FavPublishment:allRows),
+    )
+    );
+
+    },
           ),
           ListTile(
             title: Text("Waiting to Watch"),
             trailing: Icon(Icons.arrow_forward),
-            onTap: () {
-              /*
+            onTap: () async {
+
+              final allRows = await dbHelper.waitingMovies();
+
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) =>
-                        CategoryPage("Waiting to Watch", IMDBFilmList)),
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MePageDetailsPageScaffold(FavPublishment:allRows),
+                  )
               );
 
-               */
             },
           ),
+          /*
           ListTile(
             title: Text("Complated Series"),
             trailing: Icon(Icons.arrow_forward),
@@ -181,6 +193,8 @@ class _MePageState extends State<MePage> {
                */
             },
           ),
+
+           */
         ],
         trailing: Icon(Icons.arrow_drop_down_circle_outlined),
       ),
@@ -191,7 +205,7 @@ class _MePageState extends State<MePage> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => Notes()),
+            MaterialPageRoute(builder: (context) => noteList()),
           );
         },
       ),
@@ -292,7 +306,10 @@ class _ListViewSearchState extends State<ListViewSearch> {
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   //if the response has data render the movie list
-                  return Expanded(child: MoviesList(Movies: snapshot.data));
+                  return Expanded(child: MoviesList(Movies: snapshot.data, userNo: 0));
+                }else if (snapshot.hasError){
+                  print(snapshot.data);
+                  print(snapshot.error);
                 }
                 //if the service call is in progress show the progress indicator
                 return Center(child: CircularProgressIndicator());
@@ -305,13 +322,15 @@ class _ListViewSearchState extends State<ListViewSearch> {
 class HomeBodyWidget extends StatelessWidget {
   final int userNo;
   HomeBodyWidget({this.userNo});
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Publish>>(
       future: fetchMovies(http.Client()),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          return MoviesList(Movies: snapshot.data,userNo: userNo);
+          //print(userNo);
+          return MoviesList(Movies: snapshot.data, userNo: userNo);
         } else if (snapshot.hasError) {
           return Center(
               child: Icon(
@@ -338,17 +357,12 @@ class _AppDrawerState extends State<AppDrawer> {
   Widget _buildDrawerList() {
     return ListView(children: <Widget>[
       ListTile(
-        title: Text("Movies"),
+        title: Text("Latest"),
         leading: Icon(Icons.info_outline),
         onTap: () {
           /*
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => CategoryPage("Category 1", IMDBList)),
-          );
-
-           */
+          *
+          * */
         },
       ),
       FutureBuilder<List<MoviePageGenre>>(
@@ -551,4 +565,33 @@ class MoviesList extends StatelessWidget {
       },
     );
   }
+}
+
+
+class MePageDetailsPageScaffold extends StatefulWidget {
+  List<Publish> FavPublishment;
+
+  MePageDetailsPageScaffold({Key key, this.FavPublishment});
+
+  @override
+  _MePageDetailsPageScaffoldState createState() => _MePageDetailsPageScaffoldState();
+}
+
+class _MePageDetailsPageScaffoldState extends State<MePageDetailsPageScaffold> {
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.blue[900],
+        title: Center(child: Text("Favourite Filmes")),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: MoviesList(Movies:widget.FavPublishment, userNo:0),
+    );
+  }
+
 }

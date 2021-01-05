@@ -3,19 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 final String API_KEY="";
-/*
-Future<List<Publish>> fetchAll(http.Client client) async {
-  final response =
-  await client.get('https://api.themoviedb.org/3/trending/all/day?api_key=$API_KEY');
-  return compute(parseMovies, response.body);
-}
-
-Future<List<Publish>> fetchSeries(http.Client client) async {
-  final response =
-  await client.get('https://api.themoviedb.org/3/trending/tv/day?api_key=$API_KEY');
-  return compute(parseMovies, response.body);
-}
-*/
 
 Future<List<MoviePageGenre>> fetchCategories(http.Client client) async {
   final response = await client.get(
@@ -37,7 +24,6 @@ Future<List<Publish>> searchMovies(http.Client client, String keyword) async {
       'https://api.themoviedb.org/3/search/movie?api_key=$API_KEY&language=en-US&page=1&query=$query');
 
   if (response.statusCode == 200) {
-    // print("responsebody");
     print(response.body);
     return compute(parseMovies, response.body);
   } else {
@@ -56,7 +42,9 @@ Future<List<Publish>> fetchCategoryMovies(http.Client client, int id) async {
   //  'https://api.themoviedb.org/3/trending/movie/day?api_key=$API_KEY'
   final response = await client.get(
       'https://api.themoviedb.org/3/discover/movie?api_key=$API_KEY&with_genres=${id}');
+  //print(response.body);
   return compute(parseMovies, response.body);
+
 }
 
 
@@ -88,18 +76,37 @@ class Publish {
       this.release_date});
 
   factory Publish.fromJson(Map<String, dynamic> ftMovie) {
+    String _title = "";
+    if (ftMovie['original_title'] != null) {
+      _title = ftMovie['original_title'] as String;
+    } else {
+      _title = ftMovie['original_name'] as String;
+    }
     return Publish(
       media_type: ftMovie['media_type'] as String,
       id: ftMovie['id'] as int,
-      title: ftMovie['original_title'],
+      title: _title,
       backdrop_path: 'https://image.tmdb.org/t/p/original/' +
           ftMovie['backdrop_path'] as String,
       overview: ftMovie['overview'] as String,
       poster_path: 'https://image.tmdb.org/t/p/original/' +
           ftMovie['poster_path'] as String,
-      vote_average: ftMovie['vote_average'] as double,
+      vote_average: double.parse(ftMovie["vote_average"].toString()) as double,
       release_date: ftMovie['release_date'] as String,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'media_type': media_type,
+      'title': title,
+      'backdrop_path':backdrop_path,
+      'overview':overview,
+      'poster_path':poster_path,
+      'vote_average':vote_average,
+      'release_date':release_date,
+    };
   }
 }
 
@@ -183,12 +190,12 @@ class MoviePage {
       //poster_path: parsedJson['poster_path'],
       poster_path: parsedJson['poster_path']==null ? null :'https://image.tmdb.org/t/p/original/' +
           parsedJson['poster_path'] as String,
-      title: parsedJson['original_title'],
-      tagline: parsedJson['tagline'],
-      overview: parsedJson['overview'],
-      release_date: parsedJson['release_date'],
-      vote_average: parsedJson['vote_average'],
-      status: parsedJson['status'],
+      title: parsedJson['original_title'] as String,
+      tagline: parsedJson['tagline'] as String,
+      overview: parsedJson['overview'] as String,
+      release_date: parsedJson['release_date'] as String,
+      vote_average: double.parse(parsedJson["vote_average"].toString()) as double,
+      status: parsedJson['status'] as String,
       genres: _genres,
       production_companies: _companies,
       credits: MoviePageCredits.fromJson(parsedJson['credits']),

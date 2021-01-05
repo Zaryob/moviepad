@@ -3,7 +3,7 @@ import 'package:moviepad/episodes_page.dart';
 import 'moviedb.dart';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'signup_page.dart';
+import 'moviesql.dart';
 import 'homepage.dart';
 
 class ArcBannerImage extends StatelessWidget {
@@ -58,15 +58,11 @@ class PublishmentDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var textTheme = Theme.of(context).textTheme;
 
     var movieInformation = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          movie.title,
-          style: textTheme.title,
-        ),
+        Text(movie.title),
         SizedBox(height: 8.0),
         RatingInformation(movie),
         SizedBox(height: 8.0),
@@ -130,7 +126,7 @@ class _PublishmentDetailsPageState extends State<PublishmentDetailsPage> {
       return PublishmentDetailsPageProgressScaffold(widget.movie);
     }
 
-    return PublishmentDetailsPageScaffold(MoviePages: moviepage);
+    return PublishmentDetailsPageScaffold(MoviePages: moviepage, Publishment: widget.movie);
   }
 }
 
@@ -154,10 +150,17 @@ class PublishmentDetailsPageProgressScaffold extends StatelessWidget {
   }
 }
 
+class Item {
+  const Item(this.name,this.icon);
+  final String name;
+  final Icon icon;
+}
+
 class PublishmentDetailsPageScaffold extends StatefulWidget {
   MoviePage MoviePages;
+  Publish Publishment;
 
-  PublishmentDetailsPageScaffold({Key key, this.MoviePages});
+  PublishmentDetailsPageScaffold({Key key, this.MoviePages, this.Publishment});
 
   @override
   _PublishmentDetailsPageScaffoldState createState() => _PublishmentDetailsPageScaffoldState();
@@ -166,8 +169,27 @@ class PublishmentDetailsPageScaffold extends StatefulWidget {
 class _PublishmentDetailsPageScaffoldState extends State<PublishmentDetailsPageScaffold> {
   final commentController = new TextEditingController();
 
+  final dbHelper = DatabaseHelper.instance;
+  bool inFavourite = false;
+
+  Item selectedUser;
+  List<Item> users = <Item>[
+    const Item('Waiting To Watch',Icon(Icons.assignment_sharp,color: Colors.red)),
+    const Item('Watched',Icon(Icons.assignment_turned_in_outlined,color:  Colors.green)),
+  ];
+
+
+  @override
+  void initState() {
+
+    setStateOfExisting();
+    super.initState();
+
+  }
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue[900],
@@ -190,17 +212,73 @@ class _PublishmentDetailsPageScaffoldState extends State<PublishmentDetailsPageS
                       fontSize: 18.0,
                       fontWeight: FontWeight.bold,
                     )),
+                InkWell(
+                  child: Chip(
+                    backgroundColor: Colors.blue,
+                    label: Text(
+                      "Status: " + widget.MoviePages.status,
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    deleteIcon: Icon(Icons.merge_type_outlined),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(0, 20.0, 0, 8.0),
-                  child: InkWell(
-                    child: Chip(
-                      backgroundColor: Colors.blue,
-                      label: Text(
-                        "Status: " + widget.MoviePages.status,
-                        style: TextStyle(color: Colors.white),
+                  child: Row(
+                    children: [
+                      RaisedButton(
+                          shape: new RoundedRectangleBorder(
+                              borderRadius: new BorderRadius.circular(18.0),
+                              side: BorderSide(color: Colors.red)),
+                          color: inFavourite == false ? Colors.lightGreen : Colors.redAccent,
+                          textColor: Colors.white,
+                          child: inFavourite == false ? Text("Insert into Favourites") : Text("Remove from Favourites"),
+                          //    style: TextStyle(fontSize: 14)
+                          onPressed: () {
+                            setState(() {
+                              if (inFavourite==true){
+                                removeFromDatabase();
+                              }else{
+                                pushDatabase();
+                              }
+                              inFavourite = !inFavourite;
+                            });
+                          }
                       ),
-                      deleteIcon: Icon(Icons.merge_type_outlined),
-                    ),
+                      SizedBox(width: 20),
+                      Container(
+                        color: Colors.blue[100],
+                        child: DropdownButton<Item>(
+                          hint: Text("   Add to Watchlist"),
+                          value: selectedUser,
+                          onChanged: (Item Value) {
+                            setState(() {
+                              selectedUser = Value;
+                              if(selectedUser.name=='Watched'){
+                                pushDatabaseWatched("watched");
+                              }else if (selectedUser.name=='Waiting To Watch'){
+                                pushDatabaseWatched("not_watched");
+                              }
+                            });
+                          },
+                          items: users.map((Item user) {
+                            return  DropdownMenuItem<Item>(
+                              value: user,
+                              child: Row(
+                                children: <Widget>[
+                                  user.icon,
+                                  SizedBox(width: 10,),
+                                  Text(
+                                    user.name,
+                                    style:  TextStyle(color: Colors.black),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Padding(
@@ -256,7 +334,7 @@ class _PublishmentDetailsPageScaffoldState extends State<PublishmentDetailsPageS
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.search,
+                            icon: Icon(Icons.add_circle_outline,
                             color: Colors.blue[900],),
                             tooltip: 'Search Movies',
                             onPressed: () {
@@ -306,7 +384,7 @@ class _PublishmentDetailsPageScaffoldState extends State<PublishmentDetailsPageS
                                 color: Colors.blue[100],
                                 child: ListTile(
                                   title: Text(snapshot.data.documents[index]['comment']),
-                                  subtitle: Text("${AppDrawer().userNo}"),
+                                  subtitle: Text("Anonymous User"),
                                   trailing: GestureDetector(
                                       child: Icon(
                                         Icons.delete_outline,
@@ -338,6 +416,87 @@ class _PublishmentDetailsPageScaffoldState extends State<PublishmentDetailsPageS
         ],
       ),
     );
+  }
+
+  void setStateOfExisting() async{
+    final state = await dbHelper.find(widget.Publishment.id);
+    final allRows = await dbHelper.queryAllRows();
+    print('query all rows:');
+    allRows.forEach((row) => print(row));
+    if(state==true){
+      print("Already stated in to table.");
+      inFavourite=true;
+    }else {
+      print("Not found in the table.");
+      inFavourite=false;
+    }
+  }
+  void pushDatabase() async {
+    //Set the state with the new value so that the widget will re render
+    Map<String, dynamic> row = {
+      DatabaseHelper.columnId : widget.Publishment.id,
+      DatabaseHelper.columnTitle  : widget.Publishment.title,
+      DatabaseHelper.columnDate : widget.Publishment.release_date,
+      DatabaseHelper.columnMT : widget.Publishment.media_type,
+      DatabaseHelper.columnOverV: widget.Publishment.overview,
+      DatabaseHelper.columnBPath: widget.Publishment.backdrop_path,
+      DatabaseHelper.columnPPath: widget.Publishment.poster_path,
+      DatabaseHelper.columnVote: widget.Publishment.vote_average,
+
+    };
+    final state = await dbHelper.find(widget.Publishment.id);
+    if(state==true){
+      print("Already stated in to table.");
+    }else {
+      print("Not found in the table.");
+      final id = await dbHelper.insert(row);
+      print('inserted row id: $id');
+    }
+
+    final allRows = await dbHelper.queryAllRows();
+    print('query all rows:');
+    allRows.forEach((row) => print(row));
+  }
+
+  void removeFromDatabase() async {
+    final id = await dbHelper.queryRowCount();
+    final rowsDeleted = await dbHelper.delete(widget.Publishment.id);
+    print('deleted $rowsDeleted row(s): row $id');
+  }
+
+  void pushDatabaseWatched(String status) async {
+    //Set the state with the new value so that the widget will re render
+    Map<String, dynamic> row = {
+      DatabaseHelper.columnId : widget.Publishment.id,
+      DatabaseHelper.columnTitle  : widget.Publishment.title,
+      DatabaseHelper.columnDate : widget.Publishment.release_date,
+      DatabaseHelper.columnMT : widget.Publishment.media_type,
+      DatabaseHelper.columnOverV: widget.Publishment.overview,
+      DatabaseHelper.columnBPath: widget.Publishment.backdrop_path,
+      DatabaseHelper.columnPPath: widget.Publishment.poster_path,
+      DatabaseHelper.columnVote: widget.Publishment.vote_average,
+      DatabaseHelper.watched: status,
+    };
+    final state = await dbHelper.findWatched(widget.Publishment.id);
+    if(state==true){
+      print("Already stated in to table.");
+      final id =await dbHelper.updateWatched(row);
+      print('inserted row id: $id');
+    }else {
+      print("Not found in the table.");
+      final id = await dbHelper.insertWatched(row);
+      print('inserted row id: $id');
+    }
+
+    final allRows = await dbHelper.queryAllRowsWatched();
+    print('query all rows:');
+    allRows.forEach((row) => print(row));
+  }
+
+  void removeFromDatabaseWatched() async {
+    final id = await dbHelper.queryRowCountWatched();
+    final rowsDeleted = await dbHelper.deleteWatched(widget.Publishment.id);
+    print('deleted $rowsDeleted row(s): row $id');
   }
 }
 

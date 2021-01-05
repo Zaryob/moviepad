@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import 'main.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Dashboard extends StatelessWidget {
+class Dashboard extends StatefulWidget {
+  final String title;
+  final int userNo;
+  Dashboard({this.title, this.userNo});
+  @override
+  _DashboardState createState() => _DashboardState();
+}
+
+class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     final avatar = Padding(

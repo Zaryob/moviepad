@@ -6,10 +6,15 @@ import 'moviedb.dart';
 import 'package:http/http.dart' as http;
 
 
-class CategoryPage extends StatelessWidget {
+class CategoryPage extends StatefulWidget {
   final MoviePageGenre Genre;
   CategoryPage(this.Genre);
 
+  @override
+  _CategoryPageState createState() => _CategoryPageState();
+}
+
+class _CategoryPageState extends State<CategoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,30 +24,49 @@ class CategoryPage extends StatelessWidget {
           icon: Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(Genre.name),
+        title: Text(widget.Genre.name),
         centerTitle: true,
       ),
-      body: CategoryBody(Genre.id),
+      body: CategoryBody(widget.Genre.id),
     );
   }
 }
 
-class CategoryBody extends StatelessWidget {
+class CategoryBody extends StatefulWidget {
   final int id;
   CategoryBody(this.id);
 
   @override
+  _CategoryBodyState createState() => _CategoryBodyState();
+}
+
+class _CategoryBodyState extends State<CategoryBody> {
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Publish>>(
       //Initiate the service request
-        future: fetchCategoryMovies(http.Client(), id),
+        future: fetchCategoryMovies(http.Client(), widget.id),
         builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return GenreList(Movies: snapshot.data);
+          } else if (snapshot.hasError) {
+            print(snapshot.error);
+            return Center(
+                child: Icon(
+                  Icons.android,
+                  size: 220,
+                ));
+          }
+          return Center(child: CircularProgressIndicator());
+          /*
           if (snapshot.hasData) {
             //if the response has data render the movie list
             return Expanded(child: GenreList(Movies: snapshot.data));
           }
+
           //if the service call is in progress show the progress indicator
           return CircularProgressIndicator();
+          */
         });
   }
 }
@@ -54,18 +78,13 @@ class GenreList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print(Movies.length);
-    var lenght = 20;
-    if (Movies.length < 20) {
-      lenght = Movies.length;
-    }
 
     return ListView.separated(
       /*gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 1,
         ),*/
       separatorBuilder: (BuildContext context, int index) => Divider(),
-      itemCount: lenght,
+      itemCount: 20,
       itemBuilder: (context, index) {
         return Card(
           color: Colors.blue[50],
@@ -110,13 +129,26 @@ class GenreList extends StatelessWidget {
                                     Movies[index].release_date,
                                     style: TextStyle(fontSize: 15.0),
                                   ),
-                                  StarDisplayWidget(
-                                    value: ((Movies[index].vote_average) / 2)
-                                        .round(),
-                                    filledStar: Icon(Icons.star,
-                                        color: Colors.orange, size: 28),
-                                    unfilledStar: Icon(Icons.star_border,
-                                        color: Colors.blueGrey),
+                                  Row(
+                                    children: [
+                                    /*
+                                    Text(
+                                        Movies[index].vote_average.toString(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w400,
+                                          color: Colors.blueAccent,
+                                        ),
+                                      ),
+
+                                    */
+                                      StarDisplayWidget(
+                                        value: ((Movies[index].vote_average) / 2).round(),
+                                        filledStar: Icon(Icons.star,
+                                            color: Colors.orange, size: 28),
+                                        unfilledStar: Icon(Icons.star_border,
+                                            color: Colors.blueGrey),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
