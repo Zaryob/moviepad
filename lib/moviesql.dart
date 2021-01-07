@@ -13,7 +13,6 @@ class DatabaseHelper {
 
   static final table = 'favourite_table';
   static final watch_table='watch_table';
-  static final latest_table='latest_table';
   static final columnId = '_id';
   static final columnTitle = 'title';
   static final columnDate = 'release_date';
@@ -74,22 +73,13 @@ class DatabaseHelper {
             $watched TEXT NOT NULL
           )
           ''');
-    await db.execute('''
-          CREATE TABLE $watch_table (
-            $columnId INTEGER PRIMARY KEY,
-            $columnTitle TEXT NOT NULL,
-            $columnDate TEXT NOT NULL,
-            $columnMT TEXT NOT NULL,
-            $columnOverV TEXT NOT NULL,
-            $columnBPath TEXT NOT NULL,
-            $columnPPath TEXT NOT NULL,
-            $columnVote DOUBLE NOT NULL,
-            $watched TEXT NOT NULL
-          )
-          ''');
   }
 
+  // Helper methods
 
+  // Inserts a row in the database where each key in the Map is a column name
+  // and the value is the column value. The return value is the id of the
+  // inserted row.
   Future<int> insert(Map<String, dynamic> row) async {
     Database db = await instance.database;
     return await db.insert(table, row);
@@ -98,28 +88,6 @@ class DatabaseHelper {
   Future<int> insertWatched(Map<String, dynamic> row) async {
     Database db = await instance.database;
     return await db.insert(watch_table, row);
-  }
-
-  Future<int> insertLatest(Map<String, dynamic> row) async {
-    Database db = await instance.database;
-    return await db.insert(latest_table, row);
-  }
-
-  Future<bool> findLatest(int id) async {
-    Database db = await instance.database;
-    var dbclient = await db;
-
-    int count = Sqflite.firstIntValue(await dbclient.rawQuery("SELECT COUNT(*) FROM $latest_table WHERE $columnId=$id"));
-
-    if (count==0){
-      return false;
-    }
-    return true;
-  }
-
-  Future<int> deleteLatest(int id) async {
-    Database db = await instance.database;
-    return await db.delete(latest_table, where: '$columnId = ?', whereArgs: [id]);
   }
 
   Future<bool> findWatched(int id) async {
@@ -170,12 +138,7 @@ class DatabaseHelper {
     Database db = await instance.database;
     return await db.query(watch_table);
   }
-// All of the rows are returned as a list of maps, where each map is
-  // a key-value list of columns.
-  Future<List<Map<String, dynamic>>> queryAllRowsLatest() async {
-    Database db = await instance.database;
-    return await db.query(latest_table);
-  }
+
 
   // All of the methods (insert, query, update, delete) can also be done using
   // raw SQL commands. This method uses a raw query to give the row count.
