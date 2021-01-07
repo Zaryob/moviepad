@@ -30,6 +30,10 @@ dependencies:
   firebase_auth: ^0.18.3
   sqflite: ^1.2.0
   path_provider: ^1.5.1
+  firebase_messaging: ^7.0.3
+  flutter_local_notifications:
+  workmanager:
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -50,30 +54,6 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  assets:
-    - assets/artists/artist1.png
-    - assets/artists/artist2.png
-    - assets/artists/artist3.png
-    - assets/artists/artist4.png
-    - assets/artists/artist5.png
-    - assets/artists/artist6.png
-    - assets/artists/artist7.png
-    - assets/artists/artist8.png
-    - assets/artists/artist9.png
-    - assets/header/header1.png
-    - assets/header/header2.png
-    - assets/header/header3.png
-    - assets/header/header4.png
-    - assets/header/header5.png
-    - assets/header/header6.png
-    - assets/poster/poster1.png
-    - assets/poster/poster2.png
-    - assets/poster/poster3.gif
-    - assets/poster/poster3.png
-    - assets/poster/poster4.png
-    - assets/poster/poster5.png
-    - assets/poster/poster6.png
-    - assets/profile/profile.jpg
     # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.png
