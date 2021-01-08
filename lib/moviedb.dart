@@ -2,11 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
-final String API_KEY="";
-
 Future<List<MoviePageGenre>> fetchCategories(http.Client client) async {
   final response = await client.get(
-      'https://api.themoviedb.org/3/genre/movie/list?api_key=$API_KEY');
+      'https://api.themoviedb.org/3/genre/movie/list?api_key=f476c933beeb792de073665402a501ad');
   return compute(parseCategories, response.body);
 }
 
@@ -21,7 +19,7 @@ List<MoviePageGenre> parseCategories(String responseBody) {
 Future<List<Publish>> searchMovies(http.Client client, String keyword) async {
   String query = keyword.replaceAll(RegExp(' '), '+');
   final response = await client.get(
-      'https://api.themoviedb.org/3/search/movie?api_key=$API_KEY&language=en-US&page=1&query=$query');
+      'https://api.themoviedb.org/3/search/movie?api_key=f476c933beeb792de073665402a501ad&language=en-US&page=1&query=$query');
 
   if (response.statusCode == 200) {
     print(response.body);
@@ -34,14 +32,14 @@ Future<List<Publish>> searchMovies(http.Client client, String keyword) async {
 
 Future<List<Publish>> fetchMovies(http.Client client) async {
   final response = await client.get(
-      'https://api.themoviedb.org/3/trending/movie/day?api_key=$API_KEY');
+      'https://api.themoviedb.org/3/trending/movie/day?api_key=f476c933beeb792de073665402a501ad');
   return compute(parseMovies, response.body);
 }
 
 Future<List<Publish>> fetchCategoryMovies(http.Client client, int id) async {
-  //  'https://api.themoviedb.org/3/trending/movie/day?api_key=$API_KEY'
+  //  'https://api.themoviedb.org/3/trending/movie/day?api_key=f476c933beeb792de073665402a501ad'
   final response = await client.get(
-      'https://api.themoviedb.org/3/discover/movie?api_key=$API_KEY&with_genres=${id}');
+      'https://api.themoviedb.org/3/discover/movie?api_key=f476c933beeb792de073665402a501ad&with_genres=${id}');
   //print(response.body);
   return compute(parseMovies, response.body);
 
@@ -120,7 +118,7 @@ Future<MoviePage> fetchMovieDetails(http.Client client, int movie_id) async {
 
   final response = await client.get('https://api.themoviedb.org/3/movie/' +
       movie_id.toString() +
-      '?api_key=$API_KEY&language=en-US&append_to_response=credits');
+      '?api_key=f476c933beeb792de073665402a501ad&language=en-US&append_to_response=credits');
   return MoviePage.fromJson(json.decode(response.body));
 }
 

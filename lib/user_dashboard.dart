@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'main.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
+import 'package:connectivity/connectivity.dart';
+import 'package:flutter/services.dart';
 
 class Dashboard extends StatefulWidget {
   final String title;
@@ -19,9 +21,11 @@ class _DashboardState extends State<Dashboard> {
           tag: 'logo',
           child: SizedBox(
             height: 160,
-            child: Container(
+            child: Center(child: Text('Connection Status: $_connectionStatus',
+            style: TextStyle(color: Colors.blue, fontSize: 20))),
+            /*Container(
               decoration: const BoxDecoration(color: Colors.blue),
-            ),
+            ),*/
           )),
     );
     final description = Padding(
@@ -37,7 +41,7 @@ class _DashboardState extends State<Dashboard> {
     final buttonLogout = FlatButton(
         child: Text(
           'Logout',
-          style: TextStyle(color: Colors.black87, fontSize: 20),
+          style: TextStyle(color: Colors.red[800], fontSize: 20),
         ),
         onPressed: () {
           Navigator.push(
@@ -45,21 +49,61 @@ class _DashboardState extends State<Dashboard> {
         });
     return SafeArea(
         child: Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.blue[900],
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text("User Dashboard"),
-      ),
-      body: Center(
-        child: ListView(
-          shrinkWrap: true,
-          padding: EdgeInsets.symmetric(horizontal: 20),
-          children: <Widget>[avatar, description, buttonLogout],
+          appBar: AppBar(
+            backgroundColor: Colors.blue[900],
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            title: Text("User Dashboard"),
+          ),
+          body: Center(
+            child: ListView(
+              shrinkWrap: true,
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              children: <Widget>[avatar, description, buttonLogout],
         ),
       ),
     ));
+  }
+  String _connectionStatus = 'Unknown';
+  final Connectivity _connectivity = Connectivity();
+  StreamSubscription<ConnectivityResult> _connectivitySubs;
+
+  @override
+  void initState() {
+    super.initState();
+    initConnectivity();
+    _connectivitySubs =
+        _connectivity.onConnectivityChanged.listen(_updateConnectionStatus);
+  }
+  @override
+  void dispose() {
+    _connectivitySubs.cancel();
+    super.dispose();
+  }
+  Future<void> initConnectivity() async {
+    ConnectivityResult result = ConnectivityResult.none;
+    try {
+      result = await _connectivity.checkConnectivity();
+    } on PlatformException catch (e) {
+      print(e.toString());
+    }
+    if (!mounted) {
+      return Future.value(null);
+    }
+    return _updateConnectionStatus(result);
+  }
+  Future<void> _updateConnectionStatus(ConnectivityResult result) async {
+    switch (result) {
+      case ConnectivityResult.wifi:
+      case ConnectivityResult.mobile:
+      case ConnectivityResult.none:
+        setState(() => _connectionStatus = result.toString().substring(19).toUpperCase());
+        break;
+      default:
+        setState(() => _connectionStatus = 'Failed to get connectivity.');
+        break;
+    }
   }
 }
